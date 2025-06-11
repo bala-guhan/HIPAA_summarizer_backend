@@ -7,24 +7,43 @@ from langchain.prompts import ChatPromptTemplate
 import traceback
 from prompt_templates import structure_prompt_template, summary_prompt_template
 
+# Load environment variables
 load_dotenv()
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+
+# Get API keys with better error handling
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
+# Validate API keys
 if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable is not set")
+    raise ValueError(
+        "GEMINI_API_KEY environment variable is not set. "
+        "Please create a .env file in the backend directory with your API key: "
+        "GEMINI_API_KEY=your_api_key_here"
+    )
 
-llama = ChatGroq(
-    api_key=GROQ_API_KEY,
-    model='llama-3.3-70b-versatile',
-    temperature=0.7
-)
+if not GROQ_API_KEY:
+    raise ValueError(
+        "GROQ_API_KEY environment variable is not set. "
+        "Please create a .env file in the backend directory with your API key: "
+        "GROQ_API_KEY=your_api_key_here"
+    )
 
-gemini = ChatGoogleGenerativeAI(
-    google_api_key=GEMINI_API_KEY,
-    model='gemini-2.0-flash',
-    temperature=0.7
-)
+# Initialize language models
+try:
+    llama = ChatGroq(
+        api_key=GROQ_API_KEY,
+        model='llama-3.3-70b-versatile',
+        temperature=0.7
+    )
+
+    gemini = ChatGoogleGenerativeAI(
+        google_api_key=GEMINI_API_KEY,
+        model='gemini-2.0-flash',
+        temperature=0.7
+    )
+except Exception as e:
+    raise ValueError(f"Failed to initialize language models: {str(e)}")
 
 def get_summary(filepath):
     try:
