@@ -1,0 +1,32 @@
+# Web Framework
+fastapi==0.109.2
+uvicorn==0.27.1
+python-multipart==0.0.9
+
+# PDF Processing
+PyMuPDF==1.23.26
+pdfplumber==0.10.3
+
+# NLP and Text Processing
+spacy==3.7.4
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+
+# AI and Language Models
+langchain==0.1.9
+langchain-google-genai==0.0.11
+langchain-groq==0.1.1
+google-generativeai
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# CORS
+starlette==0.36.3
+
+# Authentication
+bcrypt==4.1.2
+
+# Utilities
+tqdm==4.66.2
+numpy==1.26.4
+pandas==2.2.0 
