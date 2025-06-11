@@ -6,10 +6,15 @@ from typing import Optional, Dict
 import bcrypt
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pathlib import Path
+
+# Create data directory if it doesn't exist
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
 
 # Constants
-USERS_DB_FILE = "users.json"
-SESSIONS_DB_FILE = "sessions.json"
+USERS_DB_FILE = DATA_DIR / "users.json"
+SESSIONS_DB_FILE = DATA_DIR / "sessions.json"
 TOKEN_EXPIRY_HOURS = 24
 
 # Initialize security
@@ -22,14 +27,14 @@ class AuthHandler:
         
     def _load_users(self) -> Dict:
         """Load users from JSON file or create if not exists"""
-        if os.path.exists(USERS_DB_FILE):
+        if USERS_DB_FILE.exists():
             with open(USERS_DB_FILE, 'r') as f:
                 return json.load(f)
         return {}
     
     def _load_sessions(self) -> Dict:
         """Load sessions from JSON file or create if not exists"""
-        if os.path.exists(SESSIONS_DB_FILE):
+        if SESSIONS_DB_FILE.exists():
             with open(SESSIONS_DB_FILE, 'r') as f:
                 return json.load(f)
         return {}
