@@ -23,13 +23,34 @@ DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
 # Configure allowed origins
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://hipaa-summarizer.vercel.app"
+]
+
+# Get environment
+ENV = os.getenv("ENV", "development")
+print(f"Running in {ENV} environment")
 
 app = FastAPI(title="PDF upload API")
 
+# Add logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    print(f"Request: {request.method} {request.url}")
+    print(f"Headers: {request.headers}")
+    try:
+        response = await call_next(request)
+        print(f"Response status: {response.status_code}")
+        return response
+    except Exception as e:
+        print(f"Error processing request: {str(e)}")
+        raise
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,9 +92,15 @@ async def register(user_data: UserCreate):
                 "ssn": user_data.ssn
             }
         )
-        return {"message": "User registered successfully"}
+        return JSONResponse(
+            content={"message": "User registered successfully"},
+            status_code=200
+        )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return JSONResponse(
+            content={"detail": str(e)},
+            status_code=400
+        )
 
 @app.post("/login")
 async def login(user_data: LoginCredentials):
@@ -81,13 +108,22 @@ async def login(user_data: LoginCredentials):
         # Authenticate with plain credentials
         if auth_handler.authenticate_user(user_data.username, user_data.password):
             token = auth_handler.encode_token(user_data.username)
-            return {"access_token": token, "token_type": "bearer"}
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials"
+            return JSONResponse(
+                content={
+                    "access_token": token,
+                    "token_type": "bearer"
+                },
+                status_code=200
+            )
+        return JSONResponse(
+            content={"detail": "Invalid credentials"},
+            status_code=401
         )
     except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        return JSONResponse(
+            content={"detail": str(e)},
+            status_code=401
+        )
 
 @app.post("/logout")
 async def logout(current_user: dict = Depends(get_current_user)):
