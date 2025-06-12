@@ -24,7 +24,7 @@ DATA_DIR.mkdir(exist_ok=True)
 
 # Configure allowed origins
 ALLOWED_ORIGINS = [
-    "https://hipaa-summarizer.vercel.app"
+    
 ]
 
 app = FastAPI(title="PDF upload API")
@@ -32,7 +32,7 @@ app = FastAPI(title="PDF upload API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["https://hipaa-summarizer.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,7 +56,7 @@ class LoginCredentials(BaseModel):
 class FileUpload(BaseModel):
     file_data: str
 
-@app.get("/")
+@app.get("/hello")
 async def root():
     return {"message": "Server up and running! You got this!"}
 
