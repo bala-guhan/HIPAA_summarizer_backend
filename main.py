@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
@@ -35,6 +35,17 @@ print(f"Running in {ENV} environment")
 
 app = FastAPI(title="PDF upload API")
 
+# Add CORS middleware with explicit configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
+)
+
 # Add logging middleware
 @app.middleware("http")
 async def log_requests(request, call_next):
@@ -48,13 +59,19 @@ async def log_requests(request, call_next):
         print(f"Error processing request: {str(e)}")
         raise
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Add OPTIONS handler for preflight requests
+@app.options("/{full_path:path}")
+async def options_handler(request: Request, full_path: str):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": request.headers.get("origin", ALLOWED_ORIGINS[0]),
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "3600",
+        }
+    )
 
 # Pydantic models for request validation
 class UserCreate(BaseModel):
