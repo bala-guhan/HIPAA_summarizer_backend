@@ -25,6 +25,7 @@ starlette==0.36.3
 
 # Authentication
 bcrypt==4.1.2
+PyJWT==2.8.0
 
 # Utilities
 tqdm==4.66.2
