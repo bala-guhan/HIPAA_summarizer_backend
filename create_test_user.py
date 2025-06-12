@@ -1,18 +1,28 @@
 from auth import auth_handler
 
-def create_test_user():
+def create_test_user(name, pwd, role="user"):
     try:
+        # Create a test user with sample PHI data
+        user_data = {
+            "name": name,
+            "email": f"{name.lower()}@example.com",
+            "phone": "123-456-7890",
+            "dob": "1990-01-01",
+            "ssn": "123-45-6789"
+        }
+        
         # Create a test user
-        auth_handler.register_user(
-            username="johndoe",
-            password="12345678",
-            role="user"
+        res = auth_handler.register_user(
+            username=name,
+            password=pwd,
+            user_data=user_data
         )
-        print("Test user created successfully!")
-        print(f"Username: johndoe")
-        print("Password: 12345678")
+        if res:
+            print("User created successfully!")
+        else:
+            print("Registration failed")
     except Exception as e:
         print(f"Error creating test user: {str(e)}")
 
 if __name__ == "__main__":
-    create_test_user() 
+    create_test_user('Saubhik Bhaumik', '12345678') 
