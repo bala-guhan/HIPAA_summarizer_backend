@@ -26,7 +26,8 @@ DATA_DIR.mkdir(exist_ok=True)
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://hipaa-summarizer.vercel.app"
+    "https://hipaa-summarizer.vercel.app",
+    "https://hipaa-summarizer.vercel.app/"
 ]
 
 # Get environment
@@ -41,7 +42,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
     expose_headers=["*"],
     max_age=3600,
 )
@@ -62,16 +63,19 @@ async def log_requests(request, call_next):
 # Add OPTIONS handler for preflight requests
 @app.options("/{full_path:path}")
 async def options_handler(request: Request, full_path: str):
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": request.headers.get("origin", ALLOWED_ORIGINS[0]),
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Max-Age": "3600",
-        }
-    )
+    origin = request.headers.get("origin")
+    if origin in ALLOWED_ORIGINS:
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "3600",
+            }
+        )
+    return Response(status_code=400)
 
 # Pydantic models for request validation
 class UserCreate(BaseModel):
