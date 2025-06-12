@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request, Response
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import json
@@ -24,58 +24,19 @@ DATA_DIR.mkdir(exist_ok=True)
 
 # Configure allowed origins
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://hipaa-summarizer.vercel.app",
-    "https://hipaa-summarizer.vercel.app/"
+    "https://hipaa-summarizer.vercel.app"
 ]
-
-# Get environment
-ENV = os.getenv("ENV", "development")
-print(f"Running in {ENV} environment")
 
 app = FastAPI(title="PDF upload API")
 
-# Add CORS middleware with explicit configuration
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "Accept"],
-    expose_headers=["*"],
-    max_age=3600,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
-# Add logging middleware
-@app.middleware("http")
-async def log_requests(request, call_next):
-    print(f"Request: {request.method} {request.url}")
-    print(f"Headers: {request.headers}")
-    try:
-        response = await call_next(request)
-        print(f"Response status: {response.status_code}")
-        return response
-    except Exception as e:
-        print(f"Error processing request: {str(e)}")
-        raise
-
-# Add OPTIONS handler for preflight requests
-@app.options("/{full_path:path}")
-async def options_handler(request: Request, full_path: str):
-    origin = request.headers.get("origin")
-    if origin in ALLOWED_ORIGINS:
-        return Response(
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Max-Age": "3600",
-            }
-        )
-    return Response(status_code=400)
 
 # Pydantic models for request validation
 class UserCreate(BaseModel):
@@ -150,9 +111,15 @@ async def login(user_data: LoginCredentials):
 async def logout(current_user: dict = Depends(get_current_user)):
     try:
         auth_handler.logout(current_user["token"])
-        return {"message": "Logged out successfully"}
+        return JSONResponse(
+            content={"message": "Logged out successfully"},
+            status_code=200
+        )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return JSONResponse(
+            content={"detail": str(e)},
+            status_code=400
+        )
 
 @app.post("/upload")
 async def upload(
@@ -167,7 +134,10 @@ async def upload(
             print("File decoded successfully")
         except Exception as decode_error:
             print(f"Decoding error: {str(decode_error)}")
-            raise HTTPException(status_code=400, detail=f"File decoding failed: {str(decode_error)}")
+            return JSONResponse(
+                content={"detail": f"File decoding failed: {str(decode_error)}"},
+                status_code=400
+            )
         
         try:
             # PDF data extraction
@@ -176,7 +146,10 @@ async def upload(
             print("PDF extraction completed")
         except Exception as extract_error:
             print(f"PDF extraction error: {str(extract_error)}")
-            raise HTTPException(status_code=400, detail=f"PDF extraction failed: {str(extract_error)}")
+            return JSONResponse(
+                content={"detail": f"PDF extraction failed: {str(extract_error)}"},
+                status_code=400
+            )
         
         try:
             # Use data directory for file storage
@@ -191,13 +164,19 @@ async def upload(
             success, phi_info = process_json_file(str(PDF_ANALYSIS_RESULT), str(DEIDENTIFIED_PDF_ANALYSIS))
             print(f"PHI Info : {phi_info}")
             if not success:
-                raise HTTPException(status_code=400, detail="Failed to process the file")
+                return JSONResponse(
+                    content={"detail": "Failed to process the file"},
+                    status_code=400
+                )
             print("De-identification completed")
 
             # Get user data from the database or session
             user_data = auth_handler.get_user_data(current_user["username"])
             if not user_data:
-                raise HTTPException(status_code=400, detail="User data not found")
+                return JSONResponse(
+                    content={"detail": "User data not found"},
+                    status_code=400
+                )
 
             # Verify PHI information
             verification_results = {
@@ -210,26 +189,35 @@ async def upload(
 
             # Check if any PHI matches
             if not any(verification_results.values()):
-                raise HTTPException(
-                    status_code=403,
-                    detail="No matching PHI information found. This document may not belong to you."
+                return JSONResponse(
+                    content={"detail": "No matching PHI information found. This document may not belong to you."},
+                    status_code=403
                 )
 
             summary = get_summary(str(DEIDENTIFIED_PDF_ANALYSIS))
             print("Summary generated")
 
-            return {
-                "summary": summary,
-                "phi_verification": verification_results
-            }
+            return JSONResponse(
+                content={
+                    "summary": summary,
+                    "phi_verification": verification_results
+                },
+                status_code=200
+            )
 
         except Exception as process_error:
             print(f"Processing error: {str(process_error)}")
-            raise HTTPException(status_code=400, detail=f"Processing failed: {str(process_error)}")
+            return JSONResponse(
+                content={"detail": f"Processing failed: {str(process_error)}"},
+                status_code=400
+            )
     
     except Exception as e:
         print(f"Unexpected error in upload: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Upload Failed: {str(e)}")
+        return JSONResponse(
+            content={"detail": f"Upload Failed: {str(e)}"},
+            status_code=500
+        )
 
 # Dependency for protected routes
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
