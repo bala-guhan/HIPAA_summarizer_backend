@@ -39,7 +39,13 @@ def extract_phi_info(text: str) -> Dict[str, List[str]]:
     # Extract named entities
     for ent in doc.ents:
         if ent.label_ == "PERSON":
-            phi_info["names"].append(ent.text)
+            clean_name = ent.text.split('\n')[0]
+            # Remove any additional text that might be attached
+            clean_name = clean_name.split(' Sample')[0]
+            clean_name = clean_name.split(' Age')[0]
+            # Only add if it's not empty and not already in the list
+            if clean_name and clean_name not in phi_info["names"]:
+                phi_info["names"].append(clean_name)
         elif ent.label_ == "GPE":
             phi_info["addresses"].append(ent.text)
         elif ent.label_ == "DATE":
@@ -59,7 +65,11 @@ def extract_phi_info(text: str) -> Dict[str, List[str]]:
                 phi_info["mrns"].append(value)
             elif label in ["DOB", "DATE"]:
                 phi_info["dates"].append(value)
-
+    
+    with open('captured_entities.txt', 'a') as file:
+        file.write("="*100 + "\n")
+        for item in phi_info['names']:
+            file.write(item + "\n")
     return phi_info
 
 def deidentify_text(text: str) -> Tuple[str, Dict[str, List[str]]]:
@@ -69,13 +79,17 @@ def deidentify_text(text: str) -> Tuple[str, Dict[str, List[str]]]:
         
     doc = nlp(text)
     spans_to_replace = []
+    people = []
+
     phi_info = extract_phi_info(text)
 
     # Detect named entities (built-in NER)
     for ent in doc.ents:
         if ent.label_ in ["PERSON", "GPE", "DATE"]:
             spans_to_replace.append((ent.start_char, ent.end_char, f"{{{{{ent.label_}}}}}"))
-
+            if ent.label_ in ["PERSON"]:
+                people.append(ent)
+            
     # Apply regex-based PHI detection
     for label, pattern in CUSTOM_PATTERNS.items():
         for match in re.finditer(pattern, text):
@@ -87,6 +101,11 @@ def deidentify_text(text: str) -> Tuple[str, Dict[str, List[str]]]:
     # Replace spans
     for start, end, replacement in spans_to_replace:
         text = text[:start] + replacement + text[end:]
+
+    with open("captured_entities.txt", 'a') as file:
+        for item in people:
+            file.write(str(item) + '\n')  # Convert tuple to string and add newline
+        print("entities found have been stored!")
 
     return text, phi_info
 
