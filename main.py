@@ -25,7 +25,7 @@ DATA_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="PDF upload API")
 
-ALLOWED_ORIGINS = ["http://localhost:3000", "https://hipaa-summarizer.vercel.app/"]
+ALLOWED_ORIGINS = ["http://localhost:3000", "https://hipaa-summarizer.vercel.app"]
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
