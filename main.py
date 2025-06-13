@@ -15,6 +15,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import Optional, Dict
 from datetime import datetime
 import threading
+import re
 
 # Load environment variables
 load_dotenv()
@@ -56,6 +57,12 @@ class FileUpload(BaseModel):
 # Audit log file path
 AUDIT_LOG_FILE = DATA_DIR / "audit_log.json"
 AUDIT_LOG_LOCK = threading.Lock()
+
+
+def normalize(s):
+    """Custom normalisation function"""
+    return re.sub(r'[^a-zA-Z0-9]', '', s or '').lower()
+
 
 def append_audit_log(entry):
     with AUDIT_LOG_LOCK:
@@ -172,6 +179,8 @@ async def upload(
     file: FileUpload,
     current_user: dict = Depends(get_current_user)
 ):
+    def normalize(s):
+        return re.sub(r'[^a-zA-Z0-9]', '', s or '').lower()
     async def event_stream():
         try:
             yield json.dumps({"progress": "Received file data"}) + "\n"
@@ -215,15 +224,28 @@ async def upload(
                     yield json.dumps({"progress": "User data not found", "error": True}) + "\n"
                     return
 
-                # Verify PHI information
+                # Looser PHI verification
+                user_name = normalize(user_data.get("name", ""))
+                user_email = (user_data.get("email", "") or "").lower()
+                user_phone = normalize(user_data.get("phone", ""))
+                user_dob = normalize(user_data.get("dob", ""))
+                user_ssn = normalize(user_data.get("ssn", ""))
+
+                name_match = any(normalize(name) in user_name or user_name in normalize(name) for name in phi_info.get("names", []))
+                email_match = any(email.lower() == user_email for email in phi_info.get("emails", []))
+                phone_match = any(normalize(phone) == user_phone for phone in phi_info.get("phones", []))
+                dob_match = any(normalize(dob) == user_dob for dob in phi_info.get("dates", []))
+                ssn_match = any(normalize(ssn) == user_ssn for ssn in phi_info.get("ssns", []))
+
                 verification_results = {
-                    "name_match": any(name.lower() in user_data["name"].lower() for name in phi_info["names"]),
-                    "email_match": any(email.lower() == user_data["email"].lower() for email in phi_info["emails"]),
-                    "phone_match": any(phone == user_data["phone"] for phone in phi_info["phones"]),
-                    "dob_match": any(dob == user_data["dob"] for dob in phi_info["dates"]),
-                    "ssn_match": any(ssn == user_data["ssn"] for ssn in phi_info["ssns"])
+                    "name_match": name_match,
+                    "email_match": email_match,
+                    "phone_match": phone_match,
+                    "dob_match": dob_match,
+                    "ssn_match": ssn_match
                 }
-                # Check if any PHI matches
+
+                # Allow if at least one field matches
                 is_own_record = any(verification_results.values())
                 append_audit_log({
                     "event": "upload",
