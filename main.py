@@ -75,6 +75,16 @@ def append_audit_log(entry):
 async def root():
     return {"message": "Server up and running! You got this!"}
 
+@app.get("/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    user_data = auth_handler.get_user_data(current_user["username"])
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "username": current_user["username"],
+        "email": user_data.get("email", "")
+    }
+
 @app.post("/register")
 async def register(user_data: UserCreate):
     try:

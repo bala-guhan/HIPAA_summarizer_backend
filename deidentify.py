@@ -66,10 +66,6 @@ def extract_phi_info(text: str) -> Dict[str, List[str]]:
             elif label in ["DOB", "DATE"]:
                 phi_info["dates"].append(value)
     
-    with open('captured_entities.txt', 'a') as file:
-        file.write("="*100 + "\n")
-        for item in phi_info['names']:
-            file.write(item + "\n")
     return phi_info
 
 def deidentify_text(text: str) -> Tuple[str, Dict[str, List[str]]]:
@@ -101,11 +97,6 @@ def deidentify_text(text: str) -> Tuple[str, Dict[str, List[str]]]:
     # Replace spans
     for start, end, replacement in spans_to_replace:
         text = text[:start] + replacement + text[end:]
-
-    with open("captured_entities.txt", 'a') as file:
-        for item in people:
-            file.write(str(item) + '\n')  # Convert tuple to string and add newline
-        print("entities found have been stored!")
 
     return text, phi_info
 

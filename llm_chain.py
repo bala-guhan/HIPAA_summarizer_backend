@@ -50,8 +50,6 @@ def get_summary(filepath):
     try:
         with open(filepath, 'r') as file:
             data = json.load(file)
-            print("Here is the data from the file")
-            print(data.keys())
             
         RAW_DATA = data['text']
         RAW_DATA.replace("\n", " ")
